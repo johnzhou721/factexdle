@@ -1,0 +1,143 @@
+\documentclass{article}
+\usepackage{lcg}
+\usepackage{etoolbox}
+\usepackage{parskip}
+\newcounter{a}\newcounter{b}\newcounter{c}\newcounter{d}\newcounter{aa}\newcounter{bb}\newcounter{cc}\newcounter{seed}\newcounter{ana}\newcounter{anb}\newcounter{anc}\newcounter{and}\newcounter{ane}\newif\ifcorrect
+
+\begin{document}
+Question and Answer for the game Fac\TeX dle.
+
+\ExplSyntaxOn
+\cs_new:Npn \my_gcd:nn #1 #2
+  {
+    \int_compare:nNnTF {#2} = { 0 }
+      { #1 }
+      { \my_gcd:nn {#2} { \int_mod:nn {#1} {#2} } }
+  }
+\NewDocumentCommand{\gcdcalc}{mm}
+  {
+    \int_eval:n { \my_gcd:nn {#1} {#2} }
+  }
+\ExplSyntaxOff
+
+\ExplSyntaxOn
+\newcommand{\random}[1]{
+\chgrand[quiet,first=1,last=10]
+\rand
+\setcounter{#1}{\value{rand}}
+\chgrand[quiet,first=0,last=1]
+\rand
+\int_compare:nNnTF {\value{rand}} = {0} {\relax} {\setcounter{#1}{\the\numexpr 0-\value{#1}\relax}}
+}
+
+\NewDocumentCommand{\generate}{O{\random{a}} O{\random{b}} O{\random{c}} O{\random{d}}}{\chgrand[seed=\theseed]
+#1#2#3#4%
+\setcounter{aa}{\the\numexpr\value{a}*\value{c}\relax}\setcounter{bb}{\the\numexpr\value{b}*\value{c}+\value{a}*\value{d}\relax}\setcounter{cc}{\the\numexpr\value{b}*\value{d}\relax}
+\setcounter{ana}{\int_eval:n{\gcdcalc{\thea}{\theb}*\gcdcalc{\thec}{\thed}}}
+\setcounter{anb}{\int_eval:n{\thea/\gcdcalc{\thea}{\theb}}}
+\setcounter{anc}{\int_eval:n{\theb/\gcdcalc{\thea}{\theb}}}
+\setcounter{and}{\int_eval:n{\thec/\gcdcalc{\thec}{\thed}}}
+\setcounter{ane}{\int_eval:n{\thed/\gcdcalc{\thec}{\thed}}}
+}
+
+\ExplSyntaxOff
+
+%\generate[\setcounter{a}{6}][\setcounter{b}{8}][\setcounter{c}{9}][\setcounter{d}{6}]
+
+\typein[\initseed]{Put a number here:}
+\setcounter{seed}{\initseed}
+
+\generate
+
+
+\def\prompt{Factor as $a(bx+c)(dx+e)$. \(}
+
+\gappto{\prompt}{\theaa x^2}
+
+\ExplSyntaxOn
+\int_compare:nNnTF {\value{bb}} > {0} {\gappto{\prompt}{+\thebb x}}{\gappto{\prompt}{\thebb x}}
+
+\int_compare:nNnTF {\value{cc}} > {0} {\gappto{\prompt}{+\thecc}}{\gappto{\prompt}{\thecc}}
+
+\gappto{\prompt}{\)}
+\ExplSyntaxOff
+
+\prompt
+
+\typeout\prompt
+
+\typein[\guessa]{Enter the value of a below. If none, enter 1:}
+
+\typein[\guessb]{Enter the value of b below:}
+
+\typein[\guessc]{Enter the value of c below:}
+
+\typein[\guessd]{Enter the value of d below:}
+
+\typein[\guesse]{Enter the value of e below:}
+
+\ExplSyntaxOn
+\correcttrue
+\int_compare:nNnTF {
+\gcdcalc{
+    \int_abs:n {\guessb}
+}{
+    \int_abs:n {\guessc}
+}
+} = {1} {\typeout{PASS: ~ gcd(|\guessb|,|\guessc|)=1}}
+{
+	\typeout{ERROR: ~ gcd(|\guessb|,|\guessc|)!=1}
+\correctfalse
+}
+\int_compare:nNnTF {
+\gcdcalc{
+    \int_abs:n {\guessd}
+}{
+    \int_abs:n {\guesse}
+}
+} = {1} {\typeout{PASS: ~ gcd(|\guessd|,|\guesse|)=1}}
+{
+	\typeout{ERROR: ~ gcd(|\guessd|,|\guesse|)!=1}
+\correctfalse
+}
+%F
+\int_compare:nNnTF {\the\numexpr \guessa*\guessb*\guessd\relax} = {\theaa} {\typeout{PASS: ~ \guessa*\guessb*\guessd=\theaa}}{
+\typeout{ERROR: ~ \guessa*\guessb*\guessd!=\theaa}\correctfalse
+}
+%OI
+\int_compare:nNnTF {\the\numexpr \guessa*\guessb*\guesse+\guessa*\guessc*\guessd\relax} = {\thebb} {\typeout{PASS: ~ \guessa*\guessb*\guesse+\guessa*\guessc*\guessd=\thebb}}{
+\typeout{ERROR: ~ \guessa*\guessb*\guesse+\guessa*\guessc*\guessd!=\thebb}\correctfalse
+}
+%L
+\int_compare:nNnTF {\the\numexpr \guessa*\guessc*\guesse\relax} = {\thecc} {\typeout{PASS: ~ \guessa*\guessc*\guesse=\thecc}}{
+\typeout{ERROR: ~ \guessa*\guessc*\guesse!=\thecc}\correctfalse
+}
+\ExplSyntaxOff
+\ifcorrect \typeout{You are right.}Answer: \(\guessa(\guessb x+\guessc)(\guessd x+\guesse)\)
+\else
+\typeout{You are wrong. Below are parts you got right. The SIGNS ARE IGNORED during checking; it only checks the numbers pairs.}
+% Verify it (``green or yellow blocks'')
+\ExplSyntaxOn
+\int_compare:nNnTF {\int_abs:n{\guessa}}={\int_abs:n{\theana}} {\typeout{Coefficient ~ Correct}}{}
+% check b, c against b, c
+\int_compare:nNnTF {\int_abs:n{\guessb}}={\int_abs:n{\theanb}} {
+\int_compare:nNnTF {\int_abs:n{\guessc}}={\int_abs:n{\theanc}}{\typeout{One ~ Term ~ Correct(bc)}}{}
+}{}
+% check b, c against d, e
+\int_compare:nNnTF {\int_abs:n{\guessb}}={\int_abs:n{\theand}} {
+\int_compare:nNnTF {\int_abs:n{\guessc}}={\int_abs:n{\theane}}{\typeout{One ~ Term ~ Correct(bc)}}{}
+}{}
+% check d, e against b, c
+\int_compare:nNnTF {\int_abs:n{\guessd}}={\int_abs:n{\theanb}} {
+\int_compare:nNnTF {\int_abs:n{\guesse}}={\int_abs:n{\theanc}}{\typeout{One ~ Term ~ Correct(de)}}{}
+}{}
+% check d, e against d, e
+\int_compare:nNnTF {\int_abs:n{\guessd}}={\int_abs:n{\theand}} {
+\int_compare:nNnTF {\int_abs:n{\guesse}}={\int_abs:n{\theane}}{\typeout{One ~ Term ~ Correct(de)}}{}
+}{}
+\ExplSyntaxOff
+\(\theana(\theanb x+\theanc)(\theand x+\theane)\)
+\fi
+\typein[\exit]{put in anything and press enter to exit.}
+\end{document}
+
